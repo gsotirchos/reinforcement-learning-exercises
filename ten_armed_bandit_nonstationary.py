@@ -1,8 +1,10 @@
 from k_armed_bandit import BanditEnv
+from typing import Dict, List
 import numpy as np
 from scipy.special import softmax
 import gym
 import matplotlib.pyplot as plt
+from multiprocessing import Process, Manager
 
 """
 Paramter study of various bandit algorithms for the nonstationary 10-armed
@@ -28,8 +30,8 @@ class Agent:
             self,
             environment: gym.Env,
             data_type: str,
-            num_episodes: int = 2000,
-            num_steps: int = 1000
+            num_episodes: int,
+            num_steps: int,
             ) -> np.array:
         output_data = np.empty([num_episodes, num_steps])
 
@@ -116,27 +118,26 @@ def write_to_file(x: object, y: object, file_name: str):
         for i, _ in enumerate(x):
             f.write("{}, {}\n".format(x[i], y[i]))
 
+"""
+10 armed bandit mentioned on page 33 of Sutton and Barto's Reinforcement Learning: An Introduction
+- Actions always pay out
+- Mean of payout is pulled from a normal distribution (0, 1) (called q*(a))
+  and takes random walks (adding an increment from a normal distribution (0, 0.01))
+- Actual reward is drawn from a normal distribution (q*(a), 1)
+"""
+env = BanditEnv(bandits=10)
+env.p_dist = np.full(env.bandits, 1)
+env.walk_dist = np.repeat([[0, 0.01]], env.bandits, axis=0)
+#env.walk_dist = None
+env.set_r_dist(
+    np.array([[env.np_random.normal(0, 1), 1] for i in range(10)]))
 
-if __name__ == "__main__":
-    """
-    10 armed bandit mentioned on page 33 of Sutton and Barto's Reinforcement Learning: An Introduction
-    - Actions always pay out
-    - Mean of payout is pulled from a normal distribution (0, 1) (called q*(a))
-      and takes random walks (adding an increment from a normal distribution (0, 0.01))
-    - Actual reward is drawn from a normal distribution (q*(a), 1)
-    """
-    env = BanditEnv(bandits=10)
-    env.p_dist = np.full(env.bandits, 1)
-    env.walk_dist = np.repeat([[0, 0.01]], env.bandits, axis=0)
-    #env.walk_dist = None
-    env.set_r_dist(
-        np.array([[env.np_random.normal(0, 1), 1] for i in range(10)]))
-
-    num_episodes = 2000
-    num_steps = 100000
-    n = 6
-
-    # epsilon-greedy
+# epsilon-greedy
+def train_greedy(
+        num_episodes: int = 2000,
+        num_steps: int = 100000,
+        n: int = 6,
+        results: Dict[str, List[float]] = {}):
     print("-- epsilon-greedy:")
     greedy_scores = np.empty(n)
     epsilon = np.empty(n)
@@ -152,10 +153,16 @@ if __name__ == "__main__":
         greedy_scores[i] = np.average(greedy_train[-int(num_steps / 2):])
         print("score: {}".format(greedy_scores[i]))
 
-    plt.plot(epsilon, greedy_scores, color="red", label="ε-greedy")
     write_to_file(epsilon, greedy_scores, "epsilon-greedy.csv")
+    results["parameter"] = epsilon
+    results["scores"] = greedy_scores
 
-    # greedy with optimistic initialization
+# greedy with optimistic initialization
+def train_optimist(
+        num_episodes: int = 2000,
+        num_steps: int = 100000,
+        n: int = 6,
+        results: Dict[str, List[float]] = {}):
     print("-- greedy with optimistic initialization:")
     optimist_scores = np.empty(n)
     Q0 = np.empty(n)
@@ -172,11 +179,16 @@ if __name__ == "__main__":
         optimist_scores[i] = np.average(optimist_train[-int(num_steps / 2):])
         print("score: {}".format(optimist_scores[i]))
 
-    plt.plot(Q0, optimist_scores, color="black",
-             label="greedy with optimistic initialization α=0.1")
     write_to_file(Q0, optimist_scores, "greedy-optimistic.csv")
+    results["parameter"] = Q0
+    results["scores"] = optimist_scores
 
-    # UCB
+# UCB
+def train_ucb(
+        num_episodes: int = 2000,
+        num_steps: int = 100000,
+        n: int = 6,
+        results: Dict[str, List[float]] = {}):
     print("-- upper confidence bound:")
     ucb_scores = np.empty(n)
     c = np.empty(n)
@@ -193,11 +205,17 @@ if __name__ == "__main__":
         ucb_scores[i] = np.average(ucb_train[-int(num_steps / 2):])
         print("score: {}".format(ucb_scores[i]))
 
-    plt.plot(c, ucb_scores, color="blue", label="UCB")
     write_to_file(c, ucb_scores, "ucb.csv")
+    results["parameter"] = c
+    results["scores"] = ucb_scores
 
-    # gradient bandit
-    print("-- upper confidence bound:")
+# gradient bandit
+def train_gradient(
+        num_episodes: int = 2000,
+        num_steps: int = 100000,
+        n: int = 6,
+        results: Dict[str, List[float]] = {}):
+    print("-- gradient bandit:")
     gradient_scores = np.empty(n)
     a = np.empty(n)
 
@@ -213,8 +231,55 @@ if __name__ == "__main__":
         gradient_scores[i] = np.average(gradient_train[-int(num_steps / 2):])
         print("score: {}".format(gradient_scores[i]))
 
-    plt.plot(a, gradient_scores, color="green", label="gradient bandit")
     write_to_file(a, gradient_scores, "gradient_bandit.csv")
+    results["parameter"] = a
+    results["scores"] = gradient_scores
+
+
+if __name__ == "__main__":
+    num_episodes = 2000
+    num_steps = 1
+    n = 6
+
+    manager = Manager()
+    greedy_results = manager.dict({"parameter": [], "scores": []})
+    optimist_results = manager.dict({"parameter": [], "scores": []})
+    ucb_results = manager.dict({})
+    gradient_results = manager.dict({})
+
+    p = []
+    p.append(Process(
+       target=train_greedy, args=(num_episodes, num_steps, n, greedy_results)))
+    p.append(Process(
+       target=train_optimist, args=(num_episodes, num_steps, n, optimist_results)))
+
+    for i, _ in enumerate(p):
+       p[i].start()
+
+    for i, _ in enumerate(p):
+       p[i].join()
+ 
+    p = []
+    p.append(Process(
+       target=train_ucb, args=(num_episodes, num_steps, n, ucb_results)))
+    p.append(Process(
+       target=train_gradient, args=(num_episodes, num_steps, n, gradient_results)))
+
+    for i, _ in enumerate(p):
+       p[i].start()
+
+    for i, _ in enumerate(p):
+       p[i].join()
+
+    print(greedy_results["parameter"])
+    plt.plot(greedy_results["parameter"], greedy_results["scores"],
+             color="red", label="ε-greedy")
+    plt.plot(optimist_results["parameter"], optimist_results["scores"],
+            color="black", label="greedy with optimistic initialization α=0.1")
+    plt.plot(ucb_results["parameter"], ucb_results["scores"],
+            color="blue", label="UCB")
+    plt.plot(gradient_results["parameter"], gradient_results["scores"],
+            color="green", label="gradient bandit")
 
     # plots
     plt.xlim([1 / 2 ** 7, 2 ** 2])
