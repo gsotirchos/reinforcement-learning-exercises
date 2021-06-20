@@ -144,14 +144,14 @@ def train_greedy(
 
     for i in range(n):
         epsilon[i] = 2 ** -(i + 2)
-        print("epsilon({}): {}".format(i, epsilon[i]), end=", ")
+        print("epsilon({}): {}".format(i, epsilon[i]), end=", ", flush=True)
         greedy_agent = Agent(
             exploration_prob=epsilon[i],
             step_size=0.1)
 
         greedy_train = greedy_agent.train(env, "scores", num_episodes, num_steps)
         greedy_scores[i] = np.average(greedy_train[-int(num_steps / 2):])
-        print("score: {}".format(greedy_scores[i]))
+        print("score: {}".format(greedy_scores[i], flush=True))
 
     write_to_file(epsilon, greedy_scores, "epsilon-greedy.csv")
     results["parameter"] = epsilon
@@ -168,8 +168,8 @@ def train_optimist(
     Q0 = np.empty(n)
 
     for i in range(n):
-        Q0[i] = 2 ** -(i - 2)
-        print("Q0({}): {}".format(i, Q0[i]), end=", ")
+        Q0[i] = 2 ** -(i - 4)
+        print("Q0({}): {}".format(i, Q0[i]), end=", ", flush=True)
         optimist_agent = Agent(
             init_val_estimate=Q0[i],
             exploration_prob=0.1,
@@ -177,7 +177,7 @@ def train_optimist(
 
         optimist_train = optimist_agent.train(env, "scores", num_episodes, num_steps)
         optimist_scores[i] = np.average(optimist_train[-int(num_steps / 2):])
-        print("score: {}".format(optimist_scores[i]))
+        print("score: {}".format(optimist_scores[i], flush=True))
 
     write_to_file(Q0, optimist_scores, "greedy-optimistic.csv")
     results["parameter"] = Q0
@@ -194,8 +194,8 @@ def train_ucb(
     c = np.empty(n)
 
     for i in range(n):
-        c[i] = 2 ** -(i - 3)
-        print("c({}): {}".format(i, c[i]), end=", ")
+        c[i] = 2 ** -(i - 1)
+        print("c({}): {}".format(i, c[i]), end=", ", flush=True)
         ucb_agent = Agent(
             ucb_confidence=c[i],
             exploration_prob=0.1,
@@ -203,7 +203,7 @@ def train_ucb(
 
         ucb_train = ucb_agent.train(env, "scores", num_episodes, num_steps)
         ucb_scores[i] = np.average(ucb_train[-int(num_steps / 2):])
-        print("score: {}".format(ucb_scores[i]))
+        print("score: {}".format(ucb_scores[i], flush=True))
 
     write_to_file(c, ucb_scores, "ucb.csv")
     results["parameter"] = c
@@ -220,8 +220,8 @@ def train_gradient(
     a = np.empty(n)
 
     for i in range(n):
-        a[i] = 2 ** -(i - 1)
-        print("a({}): {}".format(i, a[i]), end=", ")
+        a[i] = 2 ** -(i - 4)
+        print("a({}): {}".format(i, a[i]), end=", ", flush=True)
         gradient_agent = Agent(
             estimation_method="gradient",
             step_size=a[i],
@@ -229,7 +229,7 @@ def train_gradient(
 
         gradient_train = gradient_agent.train(env, "scores", num_episodes, num_steps)
         gradient_scores[i] = np.average(gradient_train[-int(num_steps / 2):])
-        print("score: {}".format(gradient_scores[i]))
+        print("score: {}".format(gradient_scores[i], flush=True))
 
     write_to_file(a, gradient_scores, "gradient_bandit.csv")
     results["parameter"] = a
@@ -238,7 +238,7 @@ def train_gradient(
 
 if __name__ == "__main__":
     num_episodes = 2000
-    num_steps = 1
+    num_steps = 1000
     n = 6
 
     manager = Manager()
@@ -249,9 +249,9 @@ if __name__ == "__main__":
 
     p = []
     p.append(Process(
-       target=train_greedy, args=(num_episodes, num_steps, n, greedy_results)))
+        target=train_greedy, args=(num_episodes, num_steps, n, greedy_results)))
     p.append(Process(
-       target=train_optimist, args=(num_episodes, num_steps, n, optimist_results)))
+        target=train_optimist, args=(num_episodes, num_steps, n, optimist_results)))
 
     for i, _ in enumerate(p):
        p[i].start()
@@ -261,9 +261,9 @@ if __name__ == "__main__":
  
     p = []
     p.append(Process(
-       target=train_ucb, args=(num_episodes, num_steps, n, ucb_results)))
+        target=train_ucb, args=(num_episodes, num_steps, n, ucb_results)))
     p.append(Process(
-       target=train_gradient, args=(num_episodes, num_steps, n, gradient_results)))
+        target=train_gradient, args=(num_episodes, num_steps, n, gradient_results)))
 
     for i, _ in enumerate(p):
        p[i].start()
@@ -271,19 +271,18 @@ if __name__ == "__main__":
     for i, _ in enumerate(p):
        p[i].join()
 
-    print(greedy_results["parameter"])
+    # plots
     plt.plot(greedy_results["parameter"], greedy_results["scores"],
              color="red", label="ε-greedy")
     plt.plot(optimist_results["parameter"], optimist_results["scores"],
-            color="black", label="greedy with optimistic initialization α=0.1")
+             color="black", label="greedy with optimistic initialization α=0.1")
     plt.plot(ucb_results["parameter"], ucb_results["scores"],
-            color="blue", label="UCB")
+             color="blue", label="UCB")
     plt.plot(gradient_results["parameter"], gradient_results["scores"],
-            color="green", label="gradient bandit")
+             color="green", label="gradient bandit")
 
-    # plots
-    plt.xlim([1 / 2 ** 7, 2 ** 2])
     #plt.ylim([1, 2.5])
+    plt.xlim([1 / 2 ** 7, 2 ** 2])
     plt.xscale("log", base=2)
     plt.legend()
     plt.show()
