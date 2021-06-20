@@ -29,7 +29,7 @@ class Agent:
             environment: gym.Env,
             data_type: str,
             num_episodes: int = 2000,
-            num_steps: int = 100000
+            num_steps: int = 1000
             ) -> np.array:
         output_data = np.empty([num_episodes, num_steps])
 
@@ -111,6 +111,11 @@ class Agent:
 
         return np.average(output_data, axis=0)
 
+def write_to_file(x: object, y: object, file_name: str):
+    with open(file_name, "w") as f:
+        for i, _ in enumerate(x):
+            f.write("{}, {}\n".format(x[i], y[i]))
+
 
 if __name__ == "__main__":
     """
@@ -127,11 +132,10 @@ if __name__ == "__main__":
     env.set_r_dist(
         np.array([[env.np_random.normal(0, 1), 1] for i in range(10)]))
 
-    num_episodes = 200
-    num_steps = 1000
+    num_episodes = 2000
+    num_steps = 100000
     n = 6
 
-    """
     # epsilon-greedy
     print("-- epsilon-greedy:")
     greedy_scores = np.empty(n)
@@ -149,6 +153,7 @@ if __name__ == "__main__":
         print("score: {}".format(greedy_scores[i]))
 
     plt.plot(epsilon, greedy_scores, color="red", label="ε-greedy")
+    write_to_file(epsilon, greedy_scores, "epsilon-greedy.csv")
 
     # greedy with optimistic initialization
     print("-- greedy with optimistic initialization:")
@@ -169,6 +174,7 @@ if __name__ == "__main__":
 
     plt.plot(Q0, optimist_scores, color="black",
              label="greedy with optimistic initialization α=0.1")
+    write_to_file(Q0, optimist_scores, "greedy-optimistic.csv")
 
     # UCB
     print("-- upper confidence bound:")
@@ -188,7 +194,7 @@ if __name__ == "__main__":
         print("score: {}".format(ucb_scores[i]))
 
     plt.plot(c, ucb_scores, color="blue", label="UCB")
-    """
+    write_to_file(c, ucb_scores, "ucb.csv")
 
     # gradient bandit
     print("-- upper confidence bound:")
@@ -208,6 +214,7 @@ if __name__ == "__main__":
         print("score: {}".format(gradient_scores[i]))
 
     plt.plot(a, gradient_scores, color="green", label="gradient bandit")
+    write_to_file(a, gradient_scores, "gradient_bandit.csv")
 
     # plots
     plt.xlim([1 / 2 ** 7, 2 ** 2])
