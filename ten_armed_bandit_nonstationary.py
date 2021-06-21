@@ -144,7 +144,7 @@ def train_greedy(
 
     for i in range(n):
         epsilon[i] = 2 ** -(i + 2)
-        print("epsilon({}): {}".format(i, epsilon[i]), end=", ", flush=True)
+        print("epsilon({}): {}".format(i, epsilon[i]), end=", ")
         greedy_agent = Agent(
             exploration_prob=epsilon[i],
             step_size=0.1)
@@ -169,7 +169,7 @@ def train_optimist(
 
     for i in range(n):
         Q0[i] = 2 ** -(i - 4)
-        print("Q0({}): {}".format(i, Q0[i]), end=", ", flush=True)
+        print("Q0({}): {}".format(i, Q0[i]), end=", ")
         optimist_agent = Agent(
             init_val_estimate=Q0[i],
             exploration_prob=0.1,
@@ -195,7 +195,7 @@ def train_ucb(
 
     for i in range(n):
         c[i] = 2 ** -(i - 1)
-        print("c({}): {}".format(i, c[i]), end=", ", flush=True)
+        print("c({}): {}".format(i, c[i]), end=", ")
         ucb_agent = Agent(
             ucb_confidence=c[i],
             exploration_prob=0.1,
@@ -221,7 +221,7 @@ def train_gradient(
 
     for i in range(n):
         a[i] = 2 ** -(i - 4)
-        print("a({}): {}".format(i, a[i]), end=", ", flush=True)
+        print("a({}): {}".format(i, a[i]), end=", ")
         gradient_agent = Agent(
             estimation_method="gradient",
             step_size=a[i],
@@ -282,7 +282,7 @@ if __name__ == "__main__":
              color="green", label="gradient bandit")
 
     #plt.ylim([1, 2.5])
-    plt.xlim([1 / 2 ** 7, 2 ** 2])
+    plt.xlim([1 / 2 ** 7, 2 ** 4])
     plt.xscale("log", base=2)
     plt.legend()
     plt.show()
