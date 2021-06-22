@@ -235,8 +235,7 @@ def train_gradient(
     results["parameter"] = a
     results["scores"] = gradient_scores
 
-
-if __name__ == "__main__":
+def main():
     num_episodes = 2000
     num_steps = 1000
     n = 6
@@ -288,3 +287,7 @@ if __name__ == "__main__":
     plt.show()
 
     env.close()
+
+
+if __name__ == "__main__":
+    main()
